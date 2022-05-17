@@ -66,6 +66,7 @@ const (
 	UnsignedTypeI64
 	UnsignedTypeF32
 	UnsignedTypeF64
+	UnsignedTypeV128
 	UnsignedTypeUnknown
 )
 
@@ -79,6 +80,8 @@ func (s UnsignedType) String() (ret string) {
 		ret = "f32"
 	case UnsignedTypeF64:
 		ret = "f64"
+	case UnsignedTypeV128:
+		ret = "v128"
 	case UnsignedTypeUnknown:
 		ret = "unknown"
 	}
@@ -516,7 +519,10 @@ func (o *OperationCallIndirect) Kind() OperationKind {
 	return OperationKindCallIndirect
 }
 
-type OperationDrop struct{ Depth *InclusiveRange }
+type OperationDrop struct {
+	// Depths spans across the uint64 value stack at runtime to be dopped by this operation.
+	Depth *InclusiveRange
+}
 
 func (o *OperationDrop) Kind() OperationKind {
 	return OperationKindDrop
@@ -528,13 +534,23 @@ func (o *OperationSelect) Kind() OperationKind {
 	return OperationKindSelect
 }
 
-type OperationPick struct{ Depth int }
+type OperationPick struct {
+	// Depth is the location of the pick target in the uint64 value stack at runtime.
+	// If IsTargetVector=true, this points to the location of the lower 64-bits of the vector.
+	Depth          int
+	IsTargetVector bool
+}
 
 func (o *OperationPick) Kind() OperationKind {
 	return OperationKindPick
 }
 
-type OperationSwap struct{ Depth int }
+type OperationSwap struct {
+	// Depth is the location of the pick target in the uint64 value stack at runtime.
+	// If IsTargetVector=true, this points the location of the lower 64-bits of the vector.
+	Depth          int
+	IsTargetVector bool
+}
 
 func (o *OperationSwap) Kind() OperationKind {
 	return OperationKindSwap

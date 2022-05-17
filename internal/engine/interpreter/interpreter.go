@@ -385,9 +385,11 @@ func (e *engine) lowerIR(ir *wazeroir.CompilationResult) (*code, error) {
 		case *wazeroir.OperationPick:
 			op.us = make([]uint64, 1)
 			op.us[0] = uint64(o.Depth)
+			op.b3 = o.IsTargetVector
 		case *wazeroir.OperationSwap:
 			op.us = make([]uint64, 1)
 			op.us[0] = uint64(o.Depth)
+			op.b3 = o.IsTargetVector
 		case *wazeroir.OperationGlobalGet:
 			op.us = make([]uint64, 1)
 			op.us[0] = uint64(o.Index)
@@ -808,13 +810,23 @@ func (ce *callEngine) callNativeFunc(ctx context.Context, callCtx *wasm.CallCont
 			}
 		case wazeroir.OperationKindPick:
 			{
-				ce.pushValue(ce.stack[len(ce.stack)-1-int(op.us[0])])
+				index := len(ce.stack) - 1 - int(op.us[0])
+				ce.pushValue(ce.stack[index])
+				if op.b3 { // V128 value target.
+					ce.pushValue(ce.stack[index+1])
+				}
 				frame.pc++
 			}
 		case wazeroir.OperationKindSwap:
 			{
-				index := len(ce.stack) - 1 - int(op.us[0])
-				ce.stack[len(ce.stack)-1], ce.stack[index] = ce.stack[index], ce.stack[len(ce.stack)-1]
+				if op.b3 { // V128 value target.
+					lowIndex := len(ce.stack) - 1 - int(op.us[0])
+					ce.stack[len(ce.stack)-2], ce.stack[lowIndex] = ce.stack[lowIndex], ce.stack[len(ce.stack)-2]
+					ce.stack[len(ce.stack)-1], ce.stack[lowIndex+1] = ce.stack[lowIndex+1], ce.stack[len(ce.stack)-1]
+				} else {
+					index := len(ce.stack) - 1 - int(op.us[0])
+					ce.stack[len(ce.stack)-1], ce.stack[index] = ce.stack[index], ce.stack[len(ce.stack)-1]
+				}
 				frame.pc++
 			}
 		case wazeroir.OperationKindGlobalGet:
